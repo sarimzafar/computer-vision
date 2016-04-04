@@ -28,23 +28,48 @@
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+	
+#ifndef PICTURE_IMPORT_H_INCLUDED
+#define PICTURE_IMPORT_H_INCLUDED
 
-#ifndef FILTER_H_INCLUDED
-#define FILTER_H_INCLUDED
-
-#include <opencv2/core/core.hpp>
-#include <map>
+#include <opencv2/highgui/highgui.hpp>
 #include <string>
+#include <vector>
+#include "csvreading.h"
+#include <dirent.h>
+#include "imgimport.h"
 
-class Filter {
+
+/** 
+ * @class PictureImport
+ *
+ * @brief A subclass of Imageimport. Specialized to read JPEG files and metadata and generate Frame objects.
+ *
+ *
+ */
+
+class PictureImport : public ImageImport {
     public:
-	Filter();
-	virtual ~Filter();
-        virtual cv::Mat * filter(const cv::Mat & src) = 0;
-	void setParameter(std::string param, int value);
+        /**
+         *@brief Creates a PictureImport object
+         *
+         */
+        PictureImport(std::string telemetry_path, std::string filePath, std::vector<int> videoDeviceNums);
+        
+        ~PictureImport();
 
-    protected:
-	std::map<std::string, int> * parameters;
+        /**
+         * @brief Retrieves the next frame to be analyzed
+         *
+         * @return Frame to be analyzed
+         */
+        Frame* next_frame();
+    private:
+        std::string filePath;
+	DIR* dr;
+	std::vector<Metadata> mdvc;
+        int tracker;
+	std::vector<int> videoDeviceNums;
 };
 
-#endif // FILTER_H_INCLUDED
+#endif // PICTURE_IMPORT_H_INCLUDED

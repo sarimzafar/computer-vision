@@ -1,4 +1,4 @@
-/* 
+/*
     This file is part of WARG's computer-vision
 
     Copyright (c) 2015, Waterloo Aerial Robotics Group (WARG)
@@ -11,9 +11,9 @@
     2. Redistributions in binary form must reproduce the above copyright
        notice, this list of conditions and the following disclaimer in the
        documentation and/or other materials provided with the distribution.
-    3. Usage of this code MUST be explicitly referenced to WARG and this code 
+    3. Usage of this code MUST be explicitly referenced to WARG and this code
        cannot be used in any competition against WARG.
-    4. Neither the name of the WARG nor the names of its contributors may be used 
+    4. Neither the name of the WARG nor the names of its contributors may be used
        to endorse or promote products derived from this software without specific
        prior written permission.
 
@@ -29,22 +29,23 @@
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef FILTER_H_INCLUDED
-#define FILTER_H_INCLUDED
+#ifndef QR_IDENTIFIER_H_INCLUDED
+#define QR_IDENTIFIER_H_INCLUDED
 
-#include <opencv2/core/core.hpp>
-#include <map>
 #include <string>
+#include <memory>
+#include <opencv2/core/core.hpp>
+#include <zbar.h>
 
-class Filter {
-    public:
-	Filter();
-	virtual ~Filter();
-        virtual cv::Mat * filter(const cv::Mat & src) = 0;
-	void setParameter(std::string param, int value);
+/**
+ *  @brief Reads QR Code in Given Mat
+ *    Is intended for use with a cropped image and assumes that there will be at most
+ *    one QR code in any image.
+ *
+ *  @param img Mat to be analyzed
+ *  @return nullptr if the image does not contain a QR code,
+ *      otherwise returns a pointer to the string value of the code
+ */
+std::unique_ptr<std::string> qr_identifier(cv::Mat & img);
 
-    protected:
-	std::map<std::string, int> * parameters;
-};
-
-#endif // FILTER_H_INCLUDED
+#endif // QR_IDENTIFIER_H_INCLUDED

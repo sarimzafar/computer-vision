@@ -1,4 +1,4 @@
-/*
+/* 
     This file is part of WARG's computer-vision
 
     Copyright (c) 2015, Waterloo Aerial Robotics Group (WARG)
@@ -29,54 +29,51 @@
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE TargetIdentification
-#include <boost/test/unit_test.hpp>
-#include <boost/log/trivial.hpp>
-#include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core.hpp>
+#include "pictureimport.h"
 #include <vector>
+#include <string>
+#include <dirent.h>
+#include <boost/log/trivial.hpp>
 #include <iostream>
-#include "target_identifier.h"
-#include "canny_contour_creator.h"
-#include "k_means_filter.h"
-#include "frame.h"
 
 using namespace cv;
 using namespace std;
 using namespace boost;
 
-ostream & operator<<(ostream & out, vector<Point_<int> > & contour) {
-    for(int i = 0; i < contour.size(); i++) {
-        out << contour.at(i);
-    }
-    return out;
+PictureImport::PictureImport(std::string telemetry_path, std::string filePath, std::vector<int> videoDeviceNums)
+              :ImageImport() {
+    this->videoDeviceNums=videoDeviceNums;
+    mdvc=readcsv(telemetry_path.c_str());
+    this->filePath=filePath;
+    dr=opendir(filePath.c_str());
+    struct dirent* drnt;
+    tracker=0;
 }
 
-ostream & operator<<(ostream & out, vector<vector<Point_<int> > > & contour) {
-    for(int i = 0; i < contour.size(); i++) {
-        out << "{" << endl;
-        out << "    " << contour.at(i) << endl;
-        out << "}" << endl;
-    }
-    return out;
+PictureImport::~PictureImport(){
+    closedir(dr);
+    BOOST_LOG_TRIVIAL(trace)<<"image import ends."<<endl;
 }
 
-BOOST_AUTO_TEST_CASE(KMeansAndCanny) {
-    vector<Point> * expected = new vector<Point>({Point(1445, 480), Point(1458, 405), Point(1535, 423), Point(1518, 496)});
-    if (boost::unit_test::framework::master_test_suite().argc < 2) {
-        BOOST_ERROR("Invalid number of arguments");
+Frame * PictureImport::next_frame(){
+    Mat* img=new Mat;
+    struct dirent* drnt;
+    while(img->empty()){
+	drnt=readdir(dr);
+        if(drnt==NULL){
+            BOOST_LOG_TRIVIAL(trace)<<"no more images"<<endl;
+            return NULL;
+        }
+        if(strcmp(drnt->d_name,"..")==0||strcmp(drnt->d_name,".")==0){
+            continue;
+        }
+        string true_path=filePath+'/'+drnt->d_name;
+        *img=imread(true_path,CV_LOAD_IMAGE_COLOR);
     }
-    Mat input = imread(boost::unit_test::framework::master_test_suite().argv[1], cv::IMREAD_COLOR);
-    Frame f(&input, "Test Image", Metadata());
-    KMeansFilter filter;
-    CannyContourCreator ccreator;
-    Mat * filtered = filter.filter(f.get_img());
-    vector<vector<Point> > * results = ccreator.get_contours(*filtered);
-    BOOST_CHECK(true); // TODO: This test should be done by converting contours to binary mats and comparing overlap
-    stringstream resultstr, expectedstr;
-    resultstr << *results;
-    expectedstr << *expected;
-    BOOST_TEST_MESSAGE("RESULT: " << resultstr.str());
-    BOOST_TEST_MESSAGE("EXPECTED: " << expectedstr.str());
+    string id(drnt->d_name);
+    Frame* frame_buffer=new Frame(img,id,mdvc.at(tracker));
+    tracker++;
+    return frame_buffer;
 }

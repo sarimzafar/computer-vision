@@ -29,54 +29,27 @@
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE TargetIdentification
-#include <boost/test/unit_test.hpp>
-#include <boost/log/trivial.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <vector>
-#include <iostream>
-#include "target_identifier.h"
-#include "canny_contour_creator.h"
-#include "k_means_filter.h"
-#include "frame.h"
+#include "qr_identifier.h"
+#include <opencv2/imgproc/imgproc.hpp>
 
 using namespace cv;
 using namespace std;
-using namespace boost;
+using namespace zbar;
 
-ostream & operator<<(ostream & out, vector<Point_<int> > & contour) {
-    for(int i = 0; i < contour.size(); i++) {
-        out << contour.at(i);
+unique_ptr<string> qr_identifier(Mat & img){
+    ImageScanner scanner;
+    scanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
+    Mat grey;
+    cvtColor(img,grey,CV_BGR2GRAY);
+    int width = img.cols;
+    int height = img.rows;
+    uchar *raw = (uchar *)grey.data;
+    Image image(width, height, "Y800", raw, width * height);
+    int n = scanner.scan(image);
+    Image::SymbolIterator symbol = image.symbol_begin();
+    if(symbol != image.symbol_end()){
+        unique_ptr<string> data(new string(symbol->get_data()));
+        return data;
     }
-    return out;
-}
-
-ostream & operator<<(ostream & out, vector<vector<Point_<int> > > & contour) {
-    for(int i = 0; i < contour.size(); i++) {
-        out << "{" << endl;
-        out << "    " << contour.at(i) << endl;
-        out << "}" << endl;
-    }
-    return out;
-}
-
-BOOST_AUTO_TEST_CASE(KMeansAndCanny) {
-    vector<Point> * expected = new vector<Point>({Point(1445, 480), Point(1458, 405), Point(1535, 423), Point(1518, 496)});
-    if (boost::unit_test::framework::master_test_suite().argc < 2) {
-        BOOST_ERROR("Invalid number of arguments");
-    }
-    Mat input = imread(boost::unit_test::framework::master_test_suite().argv[1], cv::IMREAD_COLOR);
-    Frame f(&input, "Test Image", Metadata());
-    KMeansFilter filter;
-    CannyContourCreator ccreator;
-    Mat * filtered = filter.filter(f.get_img());
-    vector<vector<Point> > * results = ccreator.get_contours(*filtered);
-    BOOST_CHECK(true); // TODO: This test should be done by converting contours to binary mats and comparing overlap
-    stringstream resultstr, expectedstr;
-    resultstr << *results;
-    expectedstr << *expected;
-    BOOST_TEST_MESSAGE("RESULT: " << resultstr.str());
-    BOOST_TEST_MESSAGE("EXPECTED: " << expectedstr.str());
+    return nullptr;
 }
